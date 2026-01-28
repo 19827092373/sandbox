@@ -1,5 +1,32 @@
-node_modules/
+# OS files
+.DS_Store
+Thumbs.db
+nul
+
+# IDEs
+.vscode/
+.idea/
 .claude/
 .opencode/
-nul
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+
+# Env
+.env
+.env.local
+
+# Media
 *.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
