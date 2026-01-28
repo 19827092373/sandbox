@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>课前抽样诊断系统 Pro</title>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- NO EXTERNAL ICON SCRIPT to prevent #130 error -->
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #f8fafc; /* Slate-50 */
+            color: #0f172a; /* Slate-900 */
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        /* Custom Scrollbar for lists */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Glassmorphism utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- Inline Icons (Replacements for Lucide to avoid Error #130) ---
+        const Icon = ({ size = 24, className = "", children, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className} 
+                {...props}
+            >
+                {children}
+            </svg>
+        );
+
+        const Users = (props) => (
+            <Icon {...props}>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </Icon>
+        );
+
+        const Settings = (props) => (
+            <Icon {...props}>
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+            </Icon>
+        );
+
+        const BarChart3 = (props) => (
+            <Icon {...props}>
+                <path d="M3 3v18h18" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+            </Icon>
+        );
+
+        const CheckCircle2 = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="10" />
+                <path d="m9 12 2 2 4-4" />
+            </Icon>
+        );
+
+        const ChevronRight = (props) => (
+            <Icon {...props}>
+                <path d="m9 18 6-6-6-6" />
+            </Icon>
+        );
+
+        const AlertCircle = (props) => (
+            <Icon {...props}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" x2="12" y1="8" y2="12" />
+                <line x1="12" x2="12.01" y1="16" y2="16" />
+            </Icon>
+        );
+
+        const RefreshCw = (props) => (
+            <Icon {...props}>
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+            </Icon>
+        );
+
+        const Trophy = (props) => (
+            <Icon {...props}>
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M2.8 13.12c-.1.81-.43 1.58-1 2.2a5.5 5.5 0 0 0 7.2 6.9" />
+                <path d="M15 22.22a5.5 5.5 0 0 0 7.2-6.9c-.57-.62-.9-1.39-1-2.2" />
+                <path d="M8.7 6H15.3c3.6 0 5.4 1.8 5.4 5.4v1.8c0 3.6-1.8 5.4-5.4 5.4H8.7C5.1 18.6 3.3 16.8 3.3 13.2V11.4C3.3 7.8 5.1 6 8.7 6Z" />
+            </Icon>
+        );
+
+        const ArrowUpDown = (props) => (
+            <Icon {...props}>
+                <path d="m21 16-4 4-4-4" />
+                <path d="M17 20V4" />
+                <path d="m3 8 4-4 4 4" />
+                <path d="M7 4v16" />
+            </Icon>
+        );
+
+        const ListOrdered = (props) => (
+            <Icon {...props}>
+                <line x1="10" x2="21" y1="6" y2="6" />
+                <line x1="10" x2="21" y1="12" y2="12" />
+                <line x1="10" x2="21" y1="18" y2="18" />
+                <path d="M4 6h1v4" />
+                <path d="M4 10h2" />
+                <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+            </Icon>
+        );
+
+        // --- Mock Data Generators ---
+        const DEFAULT_STUDENTS_TEXT = `张伟, 王芳, 李娜, 刘洋, 陈静, 杨强, 赵军, 黄红, 周杰, 吴刚
+郑强, 孙丽, 朱丹, 马超, 胡婷, 林涛, 郭敏, 何勇, 高健, 罗燕
+梁伟, 宋平, 谢峰, 唐磊, 许洁, 邓刚, 冯强, 曹亮, 彭飞, 曾华
+萧雯, 袁媛, 于雷, 董浩, 余波, 苏珊, 叶帆, 吕刚, 魏晨, 丁秀`;
+
+        // --- Main App Component ---
+        const App = () => {
+            // App State
+            const [stage, setStage] = useState('SETUP'); // SETUP, PICKING, INPUT, REPORT
+            
+            // Configuration State
+            const [config, setConfig] = useState({
+                totalQuestions: 20,
+                sampleSize: 15,
+                studentListText: DEFAULT_STUDENTS_TEXT,
+                parsedStudents: []
+            });
+
+            // Runtime State
+            const [selectedStudents, setSelectedStudents] = useState([]);
+            const [records, setRecords] = useState([]); // Array of { studentId, mistakes: [1, 5, ...] }
+            
+            // Parse students on config change
+            useEffect(() => {
+                const names = config.studentListText
+                    .split(/[\n,，]/) // Split by newline or comma
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                
+                const students = names.map((name, idx) => ({
+                    id: idx + 1,
+                    name: name,
+                    level: Math.random() > 0.8 ? 'A' : 'B' // Mock level
+                }));
+                
+                setConfig(prev => ({ ...prev, parsedStudents: students }));
+            }, [config.studentListText]);
+
+            // Handlers
+            const handleStart = () => {
+                setStage('PICKING');
+                // Simulate random picking animation
+                setTimeout(() => {
+                    const shuffled = [...config.parsedStudents].sort(() => 0.5 - Math.random());
+                    setSelectedStudents(shuffled.slice(0, config.sampleSize));
+                    setStage('INPUT');
+                    setRecords([]); // Reset records
+                }, 1500);
+            };
+
+            const handleRecordSubmit = (studentId, mistakes) => {
+                setRecords(prev => [...prev, { studentId, mistakes }]);
+            };
+
+            const handleRestart = () => {
+                setStage('SETUP');
+                setRecords([]);
+                setSelectedStudents([]);
+            };
+
+            // Render based on stage
+            return (
+                <div className="h-screen w-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+                    {/* Header */}
+                    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-20">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                                <BarChart3 size={20} />
+                            </div>
+                            <h1 className="text-xl font-bold text-slate-800 tracking-tight">课前诊断 Pro</h1>
+                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-medium rounded-full border border-slate-200">
+                                {stage === 'SETUP' && '参数配置'}
+                                {stage === 'PICKING' && '随机抽样'}
+                                {stage === 'INPUT' && '极速采集'}
+                                {stage === 'REPORT' && '学情分析'}
+                            </span>
+                        </div>
+                        
+                        {stage === 'REPORT' && (
+                            <button onClick={handleRestart} className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                                <RefreshCw size={16} />
+                                开始新一轮
+                            </button>
+                        )}
+                    </header>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 overflow-hidden relative">
+                        {stage === 'SETUP' && (
+                            <SetupView 
+                                config={config} 
+                                setConfig={setConfig} 
+                                onStart={handleStart} 
+                            />
+                        )}
+                        
+                        {stage === 'PICKING' && <PickingView />}
+                        
+                        {stage === 'INPUT' && (
+                            <InputPipeline 
+                                students={selectedStudents}
+                                totalQuestions={config.totalQuestions}
+                                records={records}
+                                onSubmit={handleRecordSubmit}
+                                onFinish={() => setStage('REPORT')}
+                            />
+                        )}
+                        
+                        {stage === 'REPORT' && (
+                            <ReportView 
+                                records={records} 
+                                students={selectedStudents} 
+                                totalQuestions={config.totalQuestions}
+                            />
+                        )}
+                    </main>
+                </div>
+            );
+        };
+
+        // --- 1. Setup Component ---
+        const SetupView = ({ config, setConfig, onStart }) => {
+            const coverage = Math.round((config.sampleSize / Math.max(config.parsedStudents.length, 1)) * 100);
+
+            return (
+                <div className="h-full flex items-center justify-center p-8 fade-in">
+                    <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex">
+                        {/* Left: Settings */}
+                        <div className="w-1/2 p-8 border-r border-slate-100 flex flex-col gap-6">
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-800 mb-1">本次诊断配置</h2>
+                                <p className="text-slate-400 text-sm">自定义班级名单与抽样规则</p>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">作业总题数</label>
+                                    <input 
+                                        type="number" 
+                                        min="1" max="100"
+                                        value={config.totalQuestions}
+                                        onChange={e => setConfig({...config, totalQuestions: parseInt(e.target.value) || 20})}
+                                        className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all font-mono text-lg"
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        抽样人数 
+                                        <span className="ml-2 text-xs font-normal text-slate-400">(班级共 {config.parsedStudents.length} 人)</span>
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {[10, 15, 20].map(num => (
+                                            <button 
+                                                key={num}
+                                                onClick={() => setConfig({...config, sampleSize: num})}
+                                                className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                                    config.sampleSize === num 
+                                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {num}人
+                                            </button>
+                                        ))}
+                                        <input 
+                                            type="number"
+                                            value={config.sampleSize}
+                                            onChange={e => setConfig({...config, sampleSize: parseInt(e.target.value) || 15})}
+                                            className="w-20 px-2 py-2 rounded-lg border border-slate-200 text-center outline-none focus:border-indigo-500"
+                                            placeholder="自定义"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                        学生名单导入
+                                        <span className="ml-2 text-xs font-normal text-slate-400">(支持 Excel 粘贴)</span>
+                                    </label>
+                                    <textarea 
+                                        value={config.studentListText}
+                                        onChange={e => setConfig({...config, studentListText: e.target.value})}
+                                        className="w-full h-32 px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm leading-relaxed custom-scroll resize-none"
+                                        placeholder="张三, 李四..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Summary & Action */}
+                        <div className="w-1/2 p-8 bg-slate-50 flex flex-col justify-between">
+                            <div className="space-y-6">
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-slate-500 text-sm font-medium">覆盖率预测</span>
+                                        <span className="text-indigo-600 font-bold text-lg">{coverage}%</span>
+                                    </div>
+                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div className="bg-indigo-500 h-full rounded-full" style={{width: `${Math.min(coverage, 100)}%`}}></div>
+                                    </div>
+                                    <p className="mt-3 text-xs text-slate-400 leading-relaxed">
+                                        根据统计学原理，{config.sampleSize} 人的随机样本通常能反映全班 80% 以上的共性错题趋势。
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={onStart}
+                                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-indigo-200 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group"
+                            >
+                                <Settings className="group-hover:rotate-90 transition-transform" size={20} />
+                                启动诊断程序
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 2. Picking View ---
+        const PickingView = () => (
+            <div className="h-full flex flex-col items-center justify-center bg-slate-900 text-white fade-in">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 animate-pulse"></div>
+                    <Users size={80} className="mb-6 relative z-10 text-indigo-400" />
+                </div>
+                <h2 className="text-4xl font-black tracking-tight mb-3">正在锁定目标样本...</h2>
+                <p className="text-slate-400 font-mono">RANDOMIZING_STUDENT_QUEUE...</p>
+            </div>
+        );
+
+        // --- 3. Input Pipeline (The 3-Lane Logic) ---
+        const InputPipeline = ({ students, totalQuestions, records, onSubmit, onFinish }) => {
+            // Logic to distribute students into 3 queues based on existing progress
+            const finishedIds = records.map(r => r.studentId);
+            const remaining = students.filter(s => !finishedIds.includes(s.id));
+            
+            // If all done
+            if (remaining.length === 0 && records.length >= students.length) {
+                return (
+                    <div className="h-full flex flex-col items-center justify-center fade-in">
+                        <CheckCircle2 size={80} className="text-green-500 mb-6" />
+                        <h2 className="text-3xl font-bold text-slate-800 mb-8">采集完成</h2>
+                        <button 
+                            onClick={onFinish}
+                            className="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors"
+                        >
+                            生成分析报告
+                        </button>
+                    </div>
+                );
+            }
+
+            // Distribute remaining into 3 fixed queues for UI stability
+            // In a real app, this might be dynamic. Here we just map by index.
+            // Queue Logic: We show the "Next" person for each channel
+            const channels = [0, 1, 2].map(i => {
+                // Filter students who should be in this channel (modulo 3) AND are not finished
+                return students.filter((s, idx) => idx % 3 === i && !finishedIds.includes(s.id));
+            });
+
+            return (
+                <div className="h-full flex gap-4 p-4 bg-slate-100">
+                    {channels.map((queue, idx) => (
+                        <InputChannel 
+                            key={idx} 
+                            channelId={idx + 1}
+                            queue={queue}
+                            totalQuestions={totalQuestions}
+                            onSubmit={onSubmit}
+                        />
+                    ))}
+                </div>
+            );
+        };
+
+        const InputChannel = ({ channelId, queue, totalQuestions, onSubmit }) => {
+            const [selectedMistakes, setSelectedMistakes] = useState([]);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            const [justFinished, setJustFinished] = useState(false);
+
+            const currentStudent = queue[0];
+
+            const toggleQuestion = (num) => {
+                setSelectedMistakes(prev => 
+                    prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num]
+                );
+            };
+
+            const handleSubmit = () => {
+                setIsSubmitting(true);
+                setTimeout(() => {
+                    onSubmit(currentStudent.id, selectedMistakes);
+                    setJustFinished(true);
+                    setSelectedMistakes([]);
+                    setIsSubmitting(false);
+                    setTimeout(() => setJustFinished(false), 800);
+                }, 300);
+            };
+
+            if (!currentStudent) {
+                return (
+                    <div className="flex-1 bg-white rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-300">
+                        <CheckCircle2 size={48} className="mb-2" />
+                        <span className="font-medium">通道 {channelId} 待机中</span>
+                    </div>
+                );
+            }
+
+            if (justFinished) {
+                return (
+                    <div className="flex-1 bg-emerald-500 rounded-2xl flex flex-col items-center justify-center text-white fade-in">
+                        <CheckCircle2 size={64} className="mb-4" />
+                        <h3 className="text-2xl font-bold">已录入</h3>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden slide-up">
+                    {/* Channel Header */}
+                    <div className="p-4 border-b border-slate-100 bg-slate-50">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">通道 {channelId}</span>
+                            <span className="text-xs font-medium text-slate-400 bg-white px-2 py-0.5 rounded border">
+                                队列: {queue.length}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                                {currentStudent.name[0]}
+                            </div>
+                            <h3 className="text-2xl font-bold text-slate-800">{currentStudent.name}</h3>
+                        </div>
+                    </div>
+
+                    {/* Keypad */}
+                    <div className="flex-1 p-4 overflow-y-auto custom-scroll">
+                        <div className="grid grid-cols-4 gap-2">
+                            {Array.from({length: totalQuestions}, (_, i) => i + 1).map(num => (
+                                <button
+                                    key={num}
+                                    onClick={() => toggleQuestion(num)}
+                                    className={`aspect-square rounded-xl font-bold text-xl transition-all active:scale-95 ${
+                                        selectedMistakes.includes(num)
+                                        ? 'bg-rose-500 text-white shadow-lg shadow-rose-200'
+                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
+                                    }`}
+                                >
+                                    {num}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Footer Action */}
+                    <div className="p-4 border-t border-slate-100">
+                        <button 
+                            onClick={handleSubmit}
+                            disabled={isSubmitting}
+                            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
+                                isSubmitting 
+                                ? 'bg-slate-100 text-slate-400' 
+                                : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl'
+                            }`}
+                        >
+                            {selectedMistakes.length === 0 ? '无错题 / 全对' : `提交 (${selectedMistakes.length})`}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. Report View ---
+        const ReportView = ({ records, students, totalQuestions }) => {
+            const [sortBy, setSortBy] = useState('ERROR_COUNT'); // ERROR_COUNT, ID
+            const [selectedQ, setSelectedQ] = useState(null);
+
+            // Process Data
+            const stats = useMemo(() => {
+                const map = {};
+                // Initialize all questions
+                for(let i=1; i<=totalQuestions; i++) {
+                    map[i] = { id: i, count: 0, students: [] };
+                }
+                
+                records.forEach(r => {
+                    const student = students.find(s => s.id === r.studentId);
+                    r.mistakes.forEach(qId => {
+                        if (map[qId]) {
+                            map[qId].count++;
+                            map[qId].students.push(student);
+                        }
+                    });
+                });
+
+                let result = Object.values(map);
+                
+                // Filter out 0 errors? Maybe keep them for completeness but visually dim
+                // Let's filter for the chart list to keep it clean, but maybe show all in a full table view if requested.
+                // For this demo, let's keep questions with > 0 errors for the list.
+                result = result.filter(q => q.count > 0);
+
+                // Sorting Logic
+                if (sortBy === 'ERROR_COUNT') {
+                    result.sort((a, b) => b.count - a.count || a.id - b.id);
+                } else {
+                    result.sort((a, b) => a.id - b.id);
+                }
+
+                return result;
+            }, [records, students, totalQuestions, sortBy]);
+
+            // Default selection
+            useEffect(() => {
+                if (stats.length > 0 && !selectedQ) {
+                    setSelectedQ(stats[0]); // Select Top 1 by default logic
+                }
+            }, [stats]);
+
+            // Calculate Projected Impact
+            const sampleRatio = students.length > 0 ? (stats[0]?.count || 0) / students.length : 0;
+            const severityLevel = sampleRatio > 0.6 ? 'High' : (sampleRatio > 0.3 ? 'Medium' : 'Low');
+
+            const activeItem = selectedQ || stats[0];
+
+            if (stats.length === 0) {
+                return (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                        <Trophy size={64} className="text-yellow-400 mb-4" />
+                        <h2 className="text-2xl font-bold text-slate-700">全员满分！</h2>
+                        <p>本次抽样未发现错题。</p>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="h-full flex bg-slate-100 p-6 gap-6">
+                    {/* Left: List */}
+                    <div className="w-1/3 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <span className="font-bold text-slate-700 flex items-center gap-2">
+                                <AlertCircle size={18} className="text-rose-500" />
+                                错题检视
+                            </span>
+                            
+                            {/* Sorting Toggle */}
+                            <div className="flex bg-slate-200 rounded-lg p-1">
+                                <button 
+                                    onClick={() => setSortBy('ID')}
+                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${sortBy === 'ID' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    <ListOrdered size={14} className="inline mr-1"/>
+                                    题号序
+                                </button>
+                                <button 
+                                    onClick={() => setSortBy('ERROR_COUNT')}
+                                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${sortBy === 'ERROR_COUNT' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    <ArrowUpDown size={14} className="inline mr-1"/>
+                                    错误率
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-2 custom-scroll space-y-2">
+                            {stats.map((item, idx) => (
+                                <div 
+                                    key={item.id}
+                                    onClick={() => setSelectedQ(item)}
+                                    className={`p-4 rounded-xl cursor-pointer transition-all border flex items-center justify-between group ${
+                                        activeItem?.id === item.id 
+                                        ? 'bg-indigo-50 border-indigo-200 shadow-sm' 
+                                        : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-100'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                                            sortBy === 'ERROR_COUNT' && idx < 3 ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'
+                                        }`}>
+                                            {item.id}
+                                        </div>
+                                        <div>
+                                            <div className={`font-bold ${activeItem?.id === item.id ? 'text-indigo-900' : 'text-slate-700'}`}>
+                                                第 {item.id} 题
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div className="bg-rose-500 h-full" style={{width: `${(item.count/students.length)*100}%`}}></div>
+                                                </div>
+                                                <span className="text-xs text-slate-400">{Math.round((item.count/students.length)*100)}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xl font-bold text-slate-800">{item.count}</div>
+                                        <div className="text-xs text-slate-400">人错</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right: Detail Card */}
+                    <div className="flex-1 flex flex-col gap-6">
+                        {/* Summary Card */}
+                        <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm relative overflow-hidden flex-1">
+                            <div className="absolute top-0 right-0 p-32 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none"></div>
+                            
+                            <div className="relative z-10 h-full flex flex-col">
+                                <div className="flex items-start justify-between mb-8">
+                                    <div>
+                                        <h2 className="text-5xl font-black text-slate-900 mb-2">第 {activeItem.id} 题</h2>
+                                        <div className="flex items-center gap-3">
+                                            <span className="px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-sm font-bold">
+                                                共 {activeItem.count} 人错误
+                                            </span>
+                                            <span className="text-slate-400 text-sm">
+                                                / 样本数 {students.length}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="text-right">
+                                        <div className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">错误率</div>
+                                        <div className="text-4xl font-bold text-rose-500">
+                                            {Math.round((activeItem.count/students.length)*100)}%
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Student Chips */}
+                                <div className="flex-1">
+                                    <h3 className="text-sm font-bold text-slate-500 mb-4 uppercase tracking-wider flex items-center gap-2">
+                                        <Users size={16} />
+                                        具体名单
+                                    </h3>
+                                    <div className="flex flex-wrap gap-3 content-start">
+                                        {activeItem.students.map(stu => (
+                                            <div key={stu.id} className="group relative">
+                                                <div className={`px-4 py-2 rounded-lg border flex items-center gap-2 transition-all ${
+                                                    stu.level === 'A' 
+                                                    ? 'bg-purple-50 border-purple-200 text-purple-700 hover:shadow-md hover:shadow-purple-100' 
+                                                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                                                }`}>
+                                                    <div className={`w-2 h-2 rounded-full ${stu.level === 'A' ? 'bg-purple-500' : 'bg-slate-300'}`}></div>
+                                                    <span className="font-bold">{stu.name}</span>
+                                                    {stu.level === 'A' && <span className="text-[10px] font-extrabold bg-purple-200 px-1 rounded text-purple-800">优</span>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Teaching Tip */}
+                                <div className="mt-8 pt-6 border-t border-slate-100 text-slate-500 text-sm flex gap-2">
+                                    <div className="w-1 bg-indigo-500 rounded-full"></div>
+                                    <p>
+                                        数据洞察：本题在抽样群体中错误率达 <span className="font-bold text-slate-700">{Math.round((activeItem.count/students.length)*100)}%</span>。
+                                        {activeItem.students.some(s => s.level === 'A') && " 值得注意的是，部分优生也在此题失分，建议重点排查题目陷阱。"}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
